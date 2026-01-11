@@ -58,6 +58,8 @@ const userSchema = new Schema(
 //     next();
 // })
 
+
+//remove next()
 userSchema.pre('save', async function () {
     if (!this.isModified("password")) return;
 
