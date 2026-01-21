@@ -4,7 +4,6 @@ import { User } from '../models/user.model.js'
 import { uploadOnCloudinary } from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResonse.js'
 import jwt from 'jsonwebtoken'
-import req, { is } from 'express/lib/request.js'
 import mongoose from 'mongoose'
 
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -166,8 +165,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1 // this removes the field from document
             }
         },
         {
@@ -383,7 +382,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                     $size: "$subscribers"
                 },
                 channelSubscribedToCount: {
-                    $size: "subscribedTo"
+                    $size: "$subscribedTo"
                 },
                 isSubscribed: {
                     $cond: {
@@ -419,7 +418,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         )
 })
 
+
+
 const getWatchHistory = asyncHandler(async (req, res) => {
+    if (!req.user?._id) {
+        return res
+            .status(401)
+            .json(new ApiResponse(401, null, "Unauthorized"))
+    }
     const user = await User.aggregate([
         {
             $match: {
@@ -461,6 +467,12 @@ const getWatchHistory = asyncHandler(async (req, res) => {
             }
         }
     ])
+
+    if (!user.length) {
+        return res
+            .status(404)
+            .json(new ApiResponse(404, [], "User not found"))
+    }
 
     return res
         .status(200)
